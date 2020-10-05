@@ -65,16 +65,13 @@ func BuildResponseBody(ww middleware.WrapResponseWriter, c ChiLogConfig, t1 time
 		duration := t2.Sub(t1)
 		logFields[c.Duration] = duration.Milliseconds()
 	}
-	if len(c.Bytes) > 0 {
-		logFields[c.Bytes] = ww.BytesWritten()
+	if len(c.Size) > 0 {
+		logFields[c.Size] = ww.BytesWritten()
 	}
 }
 func BuildRequestBody(r *http.Request, c ChiLogConfig, logFields logrus.Fields) {
 	if r.Body != nil {
-		x, err := httputil.DumpRequest(r, true)
-		if err == nil {
-			logFields[c.Request] = string(x)
-		}
+		_, err := httputil.DumpRequest(r, true)
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(r.Body)
 		if err != nil {

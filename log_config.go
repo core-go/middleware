@@ -6,7 +6,7 @@ type ChiLogConfig struct {
 	Duration       string `mapstructure:"duration"`
 	Uri            string `mapstructure:"uri"`
 	Body           string `mapstructure:"body"`
-	Bytes          string `mapstructure:"bytes"`
+	Size           string `mapstructure:"size"`
 	ReqId          string `mapstructure:"req_id"`
 	Scheme         string `mapstructure:"scheme"`
 	Proto          string `mapstructure:"proto"`
