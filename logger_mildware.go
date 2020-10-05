@@ -2,7 +2,6 @@ package log
 
 import (
 	"context"
-	"fmt"
 	"github.com/go-chi/chi/middleware"
 	"github.com/sirupsen/logrus"
 	"net"
@@ -11,17 +10,6 @@ import (
 )
 
 func Standardize(config ChiLogConfig) ChiLogConfig {
-	/*
-		if len(config.Msg) == 0 {
-			config.Msg = "msg"
-		}
-		if len(config.Timestamp) == 0 {
-			config.Timestamp = "timestamp"
-		}
-		if len(config.TimeFormat) == 0 {
-			config.TimeFormat = "2006-01-02T15:04:05-0700"
-		}
-	*/
 	if len(config.Duration) == 0 {
 		config.Duration = "duration"
 	}
@@ -38,14 +26,18 @@ func Logger(c ChiLogConfig, logger *logrus.Logger, f Formatter) func(h http.Hand
 			f.AppendFieldLog(logger, w, r, c, logFields)
 			ctx := context.WithValue(r.Context(), Fields, logFields)
 			if logrus.IsLevelEnabled(logrus.InfoLevel) {
-				f.LogRequest(logger, r, c, logFields, c.Single)
+				single := c.Single
+				if r.Method == "GET" && r.Method == "DELETE" {
+					single = true
+				}
+				f.LogRequest(logger, r, c, logFields, single)
 				defer func() {
-					if c.Single {
-						f.LogResponse(logger, w, r, ww, c, startTime, dw.Body.String(), logFields, c.Single)
+					if single {
+						f.LogResponse(logger, w, r, ww, c, startTime, dw.Body.String(), logFields, single)
 					} else {
 						resLogFields := BuildLogFields(c, w, r)
 						f.AppendFieldLog(logger, w, r, c, resLogFields)
-						f.LogResponse(logger, w, r, ww, c, startTime, dw.Body.String(), resLogFields, c.Single)
+						f.LogResponse(logger, w, r, ww, c, startTime, dw.Body.String(), resLogFields, single)
 					}
 				}()
 			}
@@ -64,9 +56,8 @@ func BuildLogFields(c ChiLogConfig, w http.ResponseWriter, r *http.Request) logr
 	if r.TLS != nil {
 		scheme = "https"
 	}
-	// logFields[c.Timestamp] = time.Now().UTC().Format(c.TimeFormat)
 	if len(c.Uri) > 0 {
-		logFields[c.Uri] = fmt.Sprintf("%s", r.RequestURI)
+		logFields[c.Uri] = r.RequestURI
 	}
 
 	if len(c.ReqId) > 0 {

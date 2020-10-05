@@ -32,22 +32,14 @@ func NewStructuredLogger(logger *logrus.Logger) *StructuredLogger {
 func (l *StructuredLogger) LogResponse(logger *logrus.Logger, w http.ResponseWriter, r *http.Request, ww middleware.WrapResponseWriter,
 	c ChiLogConfig, t1 time.Time, response string, logFields logrus.Fields, singleLog bool) {
 	BuildResponseBody(ww, c, t1, response, logFields)
-	if !singleLog {
-		logger.WithFields(logFields).Info("Response " + r.Method + " " + r.RequestURI)
-	} else {
+	if singleLog {
 		logger.WithFields(logFields).Info(r.Method + " " + r.RequestURI)
+	} else {
+		logger.WithFields(logFields).Info("Response " + r.Method + " " + r.RequestURI)
 	}
 }
 
 func (l *StructuredLogger) LogRequest(logger *logrus.Logger, r *http.Request, c ChiLogConfig, logFields logrus.Fields, singleLog bool) {
-	/*
-		logFields := logrus.Fields{}
-		copier.Copy(&logFields, &logFieldsInput)
-		logFields, ok := r.Context().Value(Fields).(logrus.Fields)
-		if !ok {
-			logFields = logrus.Fields{}
-		}
-	*/
 	if len(c.Request) > 0 && r.Method != "GET" && r.Method != "DELETE" {
 		BuildRequestBody(r, c, logFields)
 	}
@@ -69,7 +61,9 @@ func BuildResponseBody(ww middleware.WrapResponseWriter, c ChiLogConfig, t1 time
 		logFields[c.ResponseStatus] = ww.Status()
 	}
 	if len(c.Duration) > 0 {
-		logFields[c.Duration] = time.Since(t1).String()
+		t2 := time.Now()
+		duration := t2.Sub(t1)
+		logFields[c.Duration] = duration.Milliseconds()
 	}
 	if len(c.Bytes) > 0 {
 		logFields[c.Bytes] = ww.BytesWritten()

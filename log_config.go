@@ -1,9 +1,6 @@
 package log
 
 type ChiLogConfig struct {
-	Timestamp      string `mapstructure:"timestamp"`
-	TimeFormat     string `mapstructure:"time_format"`
-	Msg            string `mapstructure:"msg"`
 	Single         bool   `mapstructure:"single"`
 	Build          bool   `mapstructure:"build"`
 	Duration       string `mapstructure:"duration"`
