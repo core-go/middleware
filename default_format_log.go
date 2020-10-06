@@ -2,6 +2,8 @@ package log
 
 import (
 	"bytes"
+	"context"
+	"encoding/json"
 	"github.com/go-chi/chi/middleware"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
@@ -21,8 +23,7 @@ type StructuredLogger struct {
 }
 
 var loggerStatic = logrus.Logger{}
-
-const Fields = "logFields"
+var fieldConfig FieldConfig
 
 func NewStructuredLogger(logger *logrus.Logger) *StructuredLogger {
 	loggerStatic = *logger
@@ -51,6 +52,7 @@ func (l *StructuredLogger) LogRequest(logger *logrus.Logger, r *http.Request, c 
 // Add more fields middleware request and response
 func (l *StructuredLogger) AppendFieldLog(logger *logrus.Logger, w http.ResponseWriter, r *http.Request, c ChiLogConfig, logFields logrus.Fields) {
 	//logFields["user"] = "Test"
+	AppendFields(r.Context(), logFields)
 }
 
 func BuildResponseBody(ww middleware.WrapResponseWriter, c ChiLogConfig, t1 time.Time, response string, logFields logrus.Fields) {
@@ -81,4 +83,53 @@ func BuildRequestBody(r *http.Request, c ChiLogConfig, logFields logrus.Fields) 
 			r.Body = ioutil.NopCloser(buf)
 		}
 	}
+}
+
+func AppendFields(ctx context.Context, fields logrus.Fields) logrus.Fields {
+	if len(fieldConfig.FieldMap) > 0 {
+		if logFields, ok := ctx.Value(fieldConfig.FieldMap).(map[string]interface{}); ok {
+			for k, v := range logFields {
+				fields[k] = v
+			}
+		}
+	}
+	if fieldConfig.Fields != nil {
+		cfs := *fieldConfig.Fields
+		for _, k2 := range cfs {
+			if v2, ok := ctx.Value(k2).(string); ok && len(v2) > 0 {
+				fields[k2] = v2
+			}
+		}
+	}
+	return fields
+}
+
+func BuildContext(next http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		if fieldConfig.Map != nil && len(*fieldConfig.Map) > 0 {
+			var v interface{}
+			err := json.NewDecoder(r.Body).Decode(&v)
+			if err != nil {
+				next.ServeHTTP(w, r)
+			} else {
+				m, ok := v.(map[string]interface{})
+				if !ok {
+					next.ServeHTTP(w, r)
+				} else {
+					var ctx context.Context
+					ctx = r.Context()
+					for k, e := range *fieldConfig.Map {
+						x, ok2 := m[e]
+						if ok2 {
+							ctx = context.WithValue(ctx, k, x)
+						}
+					}
+					next.ServeHTTP(w, r.WithContext(ctx))
+				}
+			}
+		} else {
+			next.ServeHTTP(w, r)
+		}
+	}
+	return http.HandlerFunc(fn)
 }

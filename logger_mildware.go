@@ -6,6 +6,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -16,7 +17,21 @@ func Standardize(config ChiLogConfig) ChiLogConfig {
 	return config
 }
 
+func InitializeFieldConfig(c ChiLogConfig) {
+	if len(c.Duration) > 0 {
+		fieldConfig.Duration = c.Duration
+	} else {
+		fieldConfig.Duration = "duration"
+	}
+	fieldConfig.Map = c.Map
+	fieldConfig.FieldMap = c.FieldMap
+	if len(c.Fields) > 0 {
+		fields := strings.Split(c.Fields, ",")
+		fieldConfig.Fields = &fields
+	}
+}
 func Logger(c ChiLogConfig, logger *logrus.Logger, f Formatter) func(h http.Handler) http.Handler {
+	InitializeFieldConfig(c)
 	return func(h http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
 			dw := NewResponseWriter(w)
@@ -24,7 +39,7 @@ func Logger(c ChiLogConfig, logger *logrus.Logger, f Formatter) func(h http.Hand
 			startTime := time.Now()
 			logFields := BuildLogFields(c, w, r)
 			f.AppendFieldLog(logger, w, r, c, logFields)
-			ctx := context.WithValue(r.Context(), Fields, logFields)
+			ctx := context.WithValue(r.Context(), fieldConfig.FieldMap, logFields)
 			if logrus.IsLevelEnabled(logrus.InfoLevel) {
 				single := c.Single
 				if r.Method == "GET" && r.Method == "DELETE" {
