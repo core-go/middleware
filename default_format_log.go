@@ -13,9 +13,6 @@ import (
 	"time"
 )
 
-type Masker interface {
-	Mask(fieldName string, s string) string
-}
 type Formatter interface {
 	AppendFieldLog(logger *logrus.Logger, w http.ResponseWriter, r *http.Request, c ChiLogConfig, logFields logrus.Fields)
 	LogRequest(logger *logrus.Logger, r *http.Request, c ChiLogConfig, logFields logrus.Fields, singleLog bool)
@@ -108,7 +105,7 @@ func AppendFields(ctx context.Context, fields logrus.Fields) logrus.Fields {
 	return fields
 }
 
-func BuildContext(next http.Handler) http.Handler {
+func BuildContextWithMask(next http.Handler, mask func(fieldName, s string) string) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		if fieldConfig.Map != nil && len(*fieldConfig.Map) > 0 {
 			var v interface{}
@@ -129,7 +126,15 @@ func BuildContext(next http.Handler) http.Handler {
 								s3, ok3 := v3.(string)
 								if ok3 {
 									if len(s3) > 0 {
-										ctx = context.WithValue(ctx, k, s3)
+										if mask != nil && fieldConfig.Masks != nil && len(*fieldConfig.Masks) > 0 {
+											if Include(*fieldConfig.Masks, k) {
+												ctx = context.WithValue(ctx, k, mask(k, s3))
+											} else {
+												ctx = context.WithValue(ctx, k, s3)
+											}
+										} else {
+											ctx = context.WithValue(ctx, k, s3)
+										}
 									}
 								} else {
 									ctx = context.WithValue(ctx, k, v3)
@@ -141,7 +146,15 @@ func BuildContext(next http.Handler) http.Handler {
 								s3, ok3 := x.(string)
 								if ok3 {
 									if len(s3) > 0 {
-										ctx = context.WithValue(ctx, k, s3)
+										if mask != nil && fieldConfig.Masks != nil && len(*fieldConfig.Masks) > 0 {
+											if Include(*fieldConfig.Masks, k) {
+												ctx = context.WithValue(ctx, k, mask(k, s3))
+											} else {
+												ctx = context.WithValue(ctx, k, s3)
+											}
+										} else {
+											ctx = context.WithValue(ctx, k, s3)
+										}
 									}
 								} else {
 									ctx = context.WithValue(ctx, k, x)
@@ -158,7 +171,9 @@ func BuildContext(next http.Handler) http.Handler {
 	}
 	return http.HandlerFunc(fn)
 }
-
+func BuildContext(next http.Handler) http.Handler {
+	return BuildContextWithMask(next, nil)
+}
 func Include(vs []string, v string) bool {
 	for _, s := range vs {
 		if v == s {
