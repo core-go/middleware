@@ -9,9 +9,13 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
+	"strings"
 	"time"
 )
 
+type Masker interface {
+	Mask(fieldName string, s string) string
+}
 type Formatter interface {
 	AppendFieldLog(logger *logrus.Logger, w http.ResponseWriter, r *http.Request, c ChiLogConfig, logFields logrus.Fields)
 	LogRequest(logger *logrus.Logger, r *http.Request, c ChiLogConfig, logFields logrus.Fields, singleLog bool)
@@ -119,9 +123,30 @@ func BuildContext(next http.Handler) http.Handler {
 					var ctx context.Context
 					ctx = r.Context()
 					for k, e := range *fieldConfig.Map {
-						x, ok2 := m[e]
-						if ok2 {
-							ctx = context.WithValue(ctx, k, x)
+						if strings.Index(e, ".") >= 0 {
+							v3 := ValueOf(v, e)
+							if v3 != nil {
+								s3, ok3 := v3.(string)
+								if ok3 {
+									if len(s3) > 0 {
+										ctx = context.WithValue(ctx, k, s3)
+									}
+								} else {
+									ctx = context.WithValue(ctx, k, v3)
+								}
+							}
+						} else {
+							x, ok2 := m[e]
+							if ok2 {
+								s3, ok3 := x.(string)
+								if ok3 {
+									if len(s3) > 0 {
+										ctx = context.WithValue(ctx, k, s3)
+									}
+								} else {
+									ctx = context.WithValue(ctx, k, x)
+								}
+							}
 						}
 					}
 					next.ServeHTTP(w, r.WithContext(ctx))
@@ -132,4 +157,32 @@ func BuildContext(next http.Handler) http.Handler {
 		}
 	}
 	return http.HandlerFunc(fn)
+}
+
+func Include(vs []string, v string) bool {
+	for _, s := range vs {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}
+func ValueOf(m interface{}, path string) interface{} {
+	arr := strings.Split(path, ".")
+	i := 0
+	var c interface{}
+	c = m
+	l1 := len(arr) - 1
+	for i < len(arr) {
+		key := arr[i]
+		m2, ok := c.(map[string]interface{})
+		if ok {
+			c = m2[key]
+		}
+		if !ok || i >= l1 {
+			return c
+		}
+		i++
+	}
+	return c
 }

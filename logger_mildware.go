@@ -29,6 +29,10 @@ func InitializeFieldConfig(c ChiLogConfig) {
 		fields := strings.Split(c.Fields, ",")
 		fieldConfig.Fields = &fields
 	}
+	if len(c.Masks) > 0 {
+		fields := strings.Split(c.Masks, ",")
+		fieldConfig.Masks = &fields
+	}
 }
 func Logger(c ChiLogConfig, logger *logrus.Logger, f Formatter) func(h http.Handler) http.Handler {
 	InitializeFieldConfig(c)

@@ -19,6 +19,7 @@ type ChiLogConfig struct {
 	Response       string             `mapstructure:"response"`
 	FieldMap       string             `mapstructure:"field_map"`
 	Fields         string             `mapstructure:"fields"`
+	Masks          string             `mapstructure:"masks"`
 	Map            *map[string]string `mapstructure:"map"`
 }
 
@@ -27,4 +28,5 @@ type FieldConfig struct {
 	FieldMap string             `mapstructure:"field_map"`
 	Duration string             `mapstructure:"duration"`
 	Fields   *[]string          `mapstructure:"fields"`
+	Masks    *[]string          `mapstructure:"masks"`
 }
