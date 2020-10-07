@@ -1,7 +1,6 @@
 package log
 
 import (
-	"context"
 	"github.com/go-chi/chi/middleware"
 	"github.com/sirupsen/logrus"
 	"net"
@@ -43,7 +42,6 @@ func Logger(c ChiLogConfig, logger *logrus.Logger, f Formatter) func(h http.Hand
 			startTime := time.Now()
 			logFields := BuildLogFields(c, w, r)
 			f.AppendFieldLog(logger, w, r, c, logFields)
-			ctx := context.WithValue(r.Context(), fieldConfig.FieldMap, logFields)
 			if logrus.IsLevelEnabled(logrus.InfoLevel) {
 				single := c.Single
 				if r.Method == "GET" && r.Method == "DELETE" {
@@ -60,7 +58,7 @@ func Logger(c ChiLogConfig, logger *logrus.Logger, f Formatter) func(h http.Hand
 					}
 				}()
 			}
-			h.ServeHTTP(ww, r.WithContext(ctx))
+			h.ServeHTTP(ww, r)
 		}
 
 		return http.HandlerFunc(fn)
