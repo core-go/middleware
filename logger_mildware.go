@@ -22,6 +22,7 @@ func InitializeFieldConfig(c ChiLogConfig) {
 	} else {
 		fieldConfig.Duration = "duration"
 	}
+	fieldConfig.Ip = c.Ip
 	fieldConfig.Map = c.Map
 	fieldConfig.FieldMap = c.FieldMap
 	if len(c.Fields) > 0 {
@@ -98,11 +99,16 @@ func BuildLogFields(c ChiLogConfig, w http.ResponseWriter, r *http.Request) logr
 		logFields[c.Method] = r.Method
 	}
 	if len(c.RemoteIp) > 0 {
-		remoteIP, _, err := net.SplitHostPort(r.RemoteAddr)
-		if err != nil {
-			remoteIP = r.RemoteAddr
-		}
+		remoteIP := GetRemoteId(r)
 		logFields[c.RemoteIp] = remoteIP
 	}
 	return logFields
+}
+
+func GetRemoteId(r *http.Request) string {
+	remoteIP, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		remoteIP = r.RemoteAddr
+	}
+	return remoteIP
 }

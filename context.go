@@ -10,6 +10,12 @@ import (
 func BuildContextWithMask(next http.Handler, mask func(fieldName, s string) string) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		if fieldConfig.Map != nil && len(*fieldConfig.Map) > 0 {
+			var ctx context.Context
+			ctx = r.Context()
+			if len(fieldConfig.Ip) > 0 {
+				ip := GetRemoteId(r)
+				ctx = context.WithValue(r.Context(), fieldConfig.Ip, ip)
+			}
 			var v interface{}
 			err := json.NewDecoder(r.Body).Decode(&v)
 			if err != nil {
@@ -19,8 +25,6 @@ func BuildContextWithMask(next http.Handler, mask func(fieldName, s string) stri
 				if !ok {
 					next.ServeHTTP(w, r)
 				} else {
-					var ctx context.Context
-					ctx = r.Context()
 					for k, e := range *fieldConfig.Map {
 						if strings.Index(e, ".") >= 0 {
 							v3 := ValueOf(v, e)
@@ -68,7 +72,13 @@ func BuildContextWithMask(next http.Handler, mask func(fieldName, s string) stri
 				}
 			}
 		} else {
-			next.ServeHTTP(w, r)
+			if len(fieldConfig.Ip) > 0 {
+				ip := GetRemoteId(r)
+				ctx := context.WithValue(r.Context(), fieldConfig.Ip, ip)
+				next.ServeHTTP(w, r.WithContext(ctx))
+			} else {
+				next.ServeHTTP(w, r)
+			}
 		}
 	}
 	return http.HandlerFunc(fn)
