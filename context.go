@@ -1,8 +1,10 @@
 package log
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"strings"
 )
@@ -22,10 +24,13 @@ func BuildContextWithMask(next http.Handler, mask func(fieldName, s string) stri
 				}
 			}
 		}
-		if fieldConfig.Map != nil && len(*fieldConfig.Map) > 0 {
+		if fieldConfig.Map != nil && len(*fieldConfig.Map) > 0 && r.Body != nil && r.Method != "GET" || r.Method != "DELETE" {
+			buf := new(bytes.Buffer)
+			buf.ReadFrom(r.Body)
+			r.Body = ioutil.NopCloser(buf)
 			var v interface{}
-			err := json.NewDecoder(r.Body).Decode(&v)
-			if err != nil {
+			er2 := json.NewDecoder(strings.NewReader(buf.String())).Decode(&v)
+			if er2 != nil {
 				if len(fieldConfig.Ip) == 0 && fieldConfig.Constants == nil {
 					next.ServeHTTP(w, r)
 				} else {

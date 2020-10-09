@@ -7,7 +7,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
-	"net/http/httputil"
 	"time"
 )
 
@@ -71,15 +70,10 @@ func BuildResponseBody(ww middleware.WrapResponseWriter, c ChiLogConfig, t1 time
 }
 func BuildRequestBody(r *http.Request, c ChiLogConfig, logFields logrus.Fields) {
 	if r.Body != nil {
-		_, err := httputil.DumpRequest(r, true)
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(r.Body)
-		if err != nil {
-			logrus.Error("Error reading body: %v", err)
-		} else {
-			logFields[c.Request] = buf.String()
-			r.Body = ioutil.NopCloser(buf)
-		}
+		logFields[c.Request] = buf.String()
+		r.Body = ioutil.NopCloser(buf)
 	}
 }
 

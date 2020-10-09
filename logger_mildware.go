@@ -46,7 +46,7 @@ func Logger(c ChiLogConfig, logger *logrus.Logger, f Formatter) func(h http.Hand
 			f.AppendFieldLog(logger, w, r, c, logFields)
 			if logrus.IsLevelEnabled(logrus.InfoLevel) {
 				single := c.Single
-				if r.Method == "GET" && r.Method == "DELETE" {
+				if r.Method == "GET" || r.Method == "DELETE" {
 					single = true
 				}
 				f.LogRequest(logger, r, c, logFields, single)
