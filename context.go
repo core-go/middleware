@@ -26,7 +26,7 @@ func BuildContextWithMask(next http.Handler, mask func(fieldName, s string) stri
 			var v interface{}
 			err := json.NewDecoder(r.Body).Decode(&v)
 			if err != nil {
-				if len(fieldConfig.Ip) > 0 && fieldConfig.Constants == nil {
+				if len(fieldConfig.Ip) == 0 && fieldConfig.Constants == nil {
 					next.ServeHTTP(w, r)
 				} else {
 					next.ServeHTTP(w, r.WithContext(ctx))
@@ -34,7 +34,7 @@ func BuildContextWithMask(next http.Handler, mask func(fieldName, s string) stri
 			} else {
 				m, ok := v.(map[string]interface{})
 				if !ok {
-					if len(fieldConfig.Ip) > 0 && fieldConfig.Constants == nil {
+					if len(fieldConfig.Ip) == 0 && fieldConfig.Constants == nil {
 						next.ServeHTTP(w, r)
 					} else {
 						next.ServeHTTP(w, r.WithContext(ctx))
@@ -87,7 +87,7 @@ func BuildContextWithMask(next http.Handler, mask func(fieldName, s string) stri
 				}
 			}
 		} else {
-			if len(fieldConfig.Ip) > 0 && fieldConfig.Constants == nil {
+			if len(fieldConfig.Ip) == 0 && fieldConfig.Constants == nil {
 				next.ServeHTTP(w, r)
 			} else {
 				next.ServeHTTP(w, r.WithContext(ctx))
