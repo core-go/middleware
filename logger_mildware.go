@@ -24,6 +24,7 @@ func InitializeFieldConfig(c ChiLogConfig) {
 	}
 	fieldConfig.Ip = c.Ip
 	fieldConfig.Map = c.Map
+	fieldConfig.Constants = c.Constants
 	fieldConfig.FieldMap = c.FieldMap
 	if len(c.Fields) > 0 {
 		fields := strings.Split(c.Fields, ",")

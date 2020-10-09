@@ -22,13 +22,15 @@ type ChiLogConfig struct {
 	Fields         string             `mapstructure:"fields"`
 	Masks          string             `mapstructure:"masks"`
 	Map            *map[string]string `mapstructure:"map"`
+	Constants      *map[string]string `mapstructure:"constants"`
 }
 
 type FieldConfig struct {
-	Ip       string             `mapstructure:"ip"`
-	Map      *map[string]string `mapstructure:"map"`
-	FieldMap string             `mapstructure:"field_map"`
-	Duration string             `mapstructure:"duration"`
-	Fields   *[]string          `mapstructure:"fields"`
-	Masks    *[]string          `mapstructure:"masks"`
+	Ip        string             `mapstructure:"ip"`
+	Map       *map[string]string `mapstructure:"map"`
+	Constants *map[string]string `mapstructure:"constants"`
+	FieldMap  string             `mapstructure:"field_map"`
+	Duration  string             `mapstructure:"duration"`
+	Fields    *[]string          `mapstructure:"fields"`
+	Masks     *[]string          `mapstructure:"masks"`
 }

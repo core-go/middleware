@@ -9,21 +9,36 @@ import (
 
 func BuildContextWithMask(next http.Handler, mask func(fieldName, s string) string) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
-		if fieldConfig.Map != nil && len(*fieldConfig.Map) > 0 {
-			var ctx context.Context
-			ctx = r.Context()
-			if len(fieldConfig.Ip) > 0 {
-				ip := GetRemoteId(r)
-				ctx = context.WithValue(r.Context(), fieldConfig.Ip, ip)
+		var ctx context.Context
+		ctx = r.Context()
+		if len(fieldConfig.Ip) > 0 {
+			ip := GetRemoteId(r)
+			ctx = context.WithValue(ctx, fieldConfig.Ip, ip)
+		}
+		if fieldConfig.Constants != nil && len(*fieldConfig.Constants) > 0 {
+			for k, e := range *fieldConfig.Constants {
+				if len(e) > 0 {
+					ctx = context.WithValue(ctx, k, e)
+				}
 			}
+		}
+		if fieldConfig.Map != nil && len(*fieldConfig.Map) > 0 {
 			var v interface{}
 			err := json.NewDecoder(r.Body).Decode(&v)
 			if err != nil {
-				next.ServeHTTP(w, r)
+				if len(fieldConfig.Ip) > 0 && fieldConfig.Constants == nil {
+					next.ServeHTTP(w, r)
+				} else {
+					next.ServeHTTP(w, r.WithContext(ctx))
+				}
 			} else {
 				m, ok := v.(map[string]interface{})
 				if !ok {
-					next.ServeHTTP(w, r)
+					if len(fieldConfig.Ip) > 0 && fieldConfig.Constants == nil {
+						next.ServeHTTP(w, r)
+					} else {
+						next.ServeHTTP(w, r.WithContext(ctx))
+					}
 				} else {
 					for k, e := range *fieldConfig.Map {
 						if strings.Index(e, ".") >= 0 {
@@ -72,12 +87,10 @@ func BuildContextWithMask(next http.Handler, mask func(fieldName, s string) stri
 				}
 			}
 		} else {
-			if len(fieldConfig.Ip) > 0 {
-				ip := GetRemoteId(r)
-				ctx := context.WithValue(r.Context(), fieldConfig.Ip, ip)
-				next.ServeHTTP(w, r.WithContext(ctx))
-			} else {
+			if len(fieldConfig.Ip) > 0 && fieldConfig.Constants == nil {
 				next.ServeHTTP(w, r)
+			} else {
+				next.ServeHTTP(w, r.WithContext(ctx))
 			}
 		}
 	}
