@@ -132,12 +132,12 @@ func BuildLogFields(c ChiLogConfig, w http.ResponseWriter, r *http.Request) logr
 		logFields[c.Method] = r.Method
 	}
 	if len(c.RemoteIp) > 0 {
-		remoteIP := GetRemoteId(r)
+		remoteIP := GetRemoteIp(r)
 		logFields[c.RemoteIp] = remoteIP
 	}
 	return logFields
 }
-func GetRemoteId(r *http.Request) string {
+func GetRemoteIp(r *http.Request) string {
 	remoteIP, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		remoteIP = r.RemoteAddr
