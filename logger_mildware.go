@@ -15,13 +15,13 @@ func Standardize(config ChiLogConfig) ChiLogConfig {
 	}
 	return config
 }
-
 func InitializeFieldConfig(c ChiLogConfig) {
 	if len(c.Duration) > 0 {
 		fieldConfig.Duration = c.Duration
 	} else {
 		fieldConfig.Duration = "duration"
 	}
+	fieldConfig.Log = c.Log
 	fieldConfig.Ip = c.Ip
 	fieldConfig.Map = c.Map
 	fieldConfig.Constants = c.Constants
@@ -34,18 +34,24 @@ func InitializeFieldConfig(c ChiLogConfig) {
 		fields := strings.Split(c.Masks, ",")
 		fieldConfig.Masks = &fields
 	}
+	if len(c.Skips) > 0 {
+		fields := strings.Split(c.Skips, ",")
+		fieldConfig.Skips = &fields
+	}
 }
 func Logger(c ChiLogConfig, logger *logrus.Logger, f Formatter) func(h http.Handler) http.Handler {
 	InitializeFieldConfig(c)
 	return func(h http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
-			dw := NewResponseWriter(w)
-			ww := middleware.NewWrapResponseWriter(dw, r.ProtoMajor)
-			startTime := time.Now()
-			logFields := BuildLogFields(c, w, r)
-			f.AppendFieldLog(logger, w, r, c, logFields)
-			if logrus.IsLevelEnabled(logrus.InfoLevel) {
-				single := c.Single
+			if !fieldConfig.Log || !logrus.IsLevelEnabled(logrus.InfoLevel) || InSkipList(r, fieldConfig.Skips) {
+				h.ServeHTTP(w, r)
+			} else {
+				dw := NewResponseWriter(w)
+				ww := middleware.NewWrapResponseWriter(dw, r.ProtoMajor)
+				startTime := time.Now()
+				logFields := BuildLogFields(c, w, r)
+				f.AppendFieldLog(logger, w, r, c, logFields)
+				single := !c.Separate
 				if r.Method == "GET" || r.Method == "DELETE" {
 					single = true
 				}
@@ -59,12 +65,22 @@ func Logger(c ChiLogConfig, logger *logrus.Logger, f Formatter) func(h http.Hand
 						f.LogResponse(logger, w, r, ww, c, startTime, dw.Body.String(), resLogFields, single)
 					}
 				}()
+				h.ServeHTTP(ww, r)
 			}
-			h.ServeHTTP(ww, r)
 		}
-
 		return http.HandlerFunc(fn)
 	}
+}
+func InSkipList(r *http.Request, skips *[]string) bool {
+	if skips == nil || len(*skips) == 0 {
+		return false
+	}
+	for _, s := range *skips {
+		if strings.HasSuffix(s, r.RequestURI) {
+			return true
+		}
+	}
+	return false
 }
 func BuildLogFields(c ChiLogConfig, w http.ResponseWriter, r *http.Request) logrus.Fields {
 	logFields := logrus.Fields{}

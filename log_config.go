@@ -1,8 +1,10 @@
 package log
 
 type ChiLogConfig struct {
-	Single         bool               `mapstructure:"single"`
+	Separate       bool               `mapstructure:"separate"`
 	Build          bool               `mapstructure:"build"`
+	Log            bool               `mapstructure:"log"`
+	Skips          string             `mapstructure:"skips"`
 	Ip             string             `mapstructure:"ip"`
 	Duration       string             `mapstructure:"duration"`
 	Uri            string             `mapstructure:"uri"`
@@ -26,6 +28,7 @@ type ChiLogConfig struct {
 }
 
 type FieldConfig struct {
+	Log       bool               `mapstructure:"log"`
 	Ip        string             `mapstructure:"ip"`
 	Map       *map[string]string `mapstructure:"map"`
 	Constants *map[string]string `mapstructure:"constants"`
@@ -33,4 +36,5 @@ type FieldConfig struct {
 	Duration  string             `mapstructure:"duration"`
 	Fields    *[]string          `mapstructure:"fields"`
 	Masks     *[]string          `mapstructure:"masks"`
+	Skips     *[]string          `mapstructure:"skips"`
 }
