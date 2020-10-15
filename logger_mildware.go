@@ -1,6 +1,7 @@
 package log
 
 import (
+	"fmt"
 	"github.com/go-chi/chi/middleware"
 	"github.com/sirupsen/logrus"
 	"net"
@@ -39,8 +40,23 @@ func InitializeFieldConfig(c ChiLogConfig) {
 		fieldConfig.Skips = &fields
 	}
 }
+func InitKeyMap(logger *logrus.Logger) {
+	f1, ok := logger.Formatter.(*logrus.JSONFormatter)
+	if ok {
+		maps := make(map[string]string)
+		fms := f1.FieldMap
+		for k, e := range fms {
+			k2 := fmt.Sprint(k)
+			maps[k2] = e
+		}
+		if len(maps) > 0 {
+			fieldConfig.KeyMap = &maps
+		}
+	}
+}
 func Logger(c ChiLogConfig, logger *logrus.Logger, f Formatter) func(h http.Handler) http.Handler {
 	InitializeFieldConfig(c)
+	InitKeyMap(logger)
 	return func(h http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
 			if !fieldConfig.Log || !logrus.IsLevelEnabled(logrus.InfoLevel) || InSkipList(r, fieldConfig.Skips) {
@@ -121,7 +137,6 @@ func BuildLogFields(c ChiLogConfig, w http.ResponseWriter, r *http.Request) logr
 	}
 	return logFields
 }
-
 func GetRemoteId(r *http.Request) string {
 	remoteIP, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {

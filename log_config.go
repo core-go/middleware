@@ -25,6 +25,8 @@ type ChiLogConfig struct {
 	Masks          string             `mapstructure:"masks"`
 	Map            *map[string]string `mapstructure:"map"`
 	Constants      *map[string]string `mapstructure:"constants"`
+	KeyMap         *map[string]string `mapstructure:"key_map"`
+	Goroutines     bool               `mapstructure:"goroutines"`
 }
 
 type FieldConfig struct {
@@ -37,4 +39,5 @@ type FieldConfig struct {
 	Fields    *[]string          `mapstructure:"fields"`
 	Masks     *[]string          `mapstructure:"masks"`
 	Skips     *[]string          `mapstructure:"skips"`
+	KeyMap    *map[string]string `mapstructure:"key_map"`
 }
