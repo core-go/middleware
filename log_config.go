@@ -1,6 +1,6 @@
-package log
+package middleware
 
-type ChiLogConfig struct {
+type LogConfig struct {
 	Separate       bool               `mapstructure:"separate"`
 	Build          bool               `mapstructure:"build"`
 	Log            bool               `mapstructure:"log"`

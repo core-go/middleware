@@ -1,1 +1,1 @@
-# chi-log
+# middleware-log

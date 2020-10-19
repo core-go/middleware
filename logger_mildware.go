@@ -1,8 +1,7 @@
-package log
+package middleware
 
 import (
 	"fmt"
-	"github.com/go-chi/chi/middleware"
 	"github.com/sirupsen/logrus"
 	"net"
 	"net/http"
@@ -10,13 +9,13 @@ import (
 	"time"
 )
 
-func Standardize(config ChiLogConfig) ChiLogConfig {
+func Standardize(config LogConfig) LogConfig {
 	if len(config.Duration) == 0 {
 		config.Duration = "duration"
 	}
 	return config
 }
-func InitializeFieldConfig(c ChiLogConfig) {
+func InitializeFieldConfig(c LogConfig) {
 	if len(c.Duration) > 0 {
 		fieldConfig.Duration = c.Duration
 	} else {
@@ -54,7 +53,7 @@ func InitKeyMap(logger *logrus.Logger) {
 		}
 	}
 }
-func Logger(c ChiLogConfig, logger *logrus.Logger, f Formatter) func(h http.Handler) http.Handler {
+func Logger(c LogConfig, logger *logrus.Logger, f Formatter) func(h http.Handler) http.Handler {
 	InitializeFieldConfig(c)
 	InitKeyMap(logger)
 	return func(h http.Handler) http.Handler {
@@ -63,7 +62,7 @@ func Logger(c ChiLogConfig, logger *logrus.Logger, f Formatter) func(h http.Hand
 				h.ServeHTTP(w, r)
 			} else {
 				dw := NewResponseWriter(w)
-				ww := middleware.NewWrapResponseWriter(dw, r.ProtoMajor)
+				ww := NewWrapResponseWriter(dw, r.ProtoMajor)
 				startTime := time.Now()
 				logFields := BuildLogFields(c, w, r)
 				f.AppendFieldLog(logger, w, r, c, logFields)
@@ -98,7 +97,7 @@ func InSkipList(r *http.Request, skips *[]string) bool {
 	}
 	return false
 }
-func BuildLogFields(c ChiLogConfig, w http.ResponseWriter, r *http.Request) logrus.Fields {
+func BuildLogFields(c LogConfig, w http.ResponseWriter, r *http.Request) logrus.Fields {
 	logFields := logrus.Fields{}
 	if !c.Build {
 		return logFields
@@ -112,7 +111,7 @@ func BuildLogFields(c ChiLogConfig, w http.ResponseWriter, r *http.Request) logr
 	}
 
 	if len(c.ReqId) > 0 {
-		if reqID := middleware.GetReqID(r.Context()); reqID != "" {
+		if reqID := GetReqID(r.Context()); reqID != "" {
 			logFields[c.ReqId] = reqID
 		}
 	}

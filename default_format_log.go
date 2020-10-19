@@ -1,10 +1,9 @@
-package log
+package middleware
 
 import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/go-chi/chi/middleware"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
@@ -15,9 +14,9 @@ type Producer interface {
 	Produce(ctx context.Context, data []byte, attributes *map[string]string) (string, error)
 }
 type Formatter interface {
-	AppendFieldLog(logger *logrus.Logger, w http.ResponseWriter, r *http.Request, c ChiLogConfig, logFields logrus.Fields)
-	LogRequest(logger *logrus.Logger, r *http.Request, c ChiLogConfig, logFields logrus.Fields, singleLog bool)
-	LogResponse(logger *logrus.Logger, w http.ResponseWriter, r *http.Request, ww middleware.WrapResponseWriter, c ChiLogConfig, startTime time.Time, response string, logFields logrus.Fields, singleLog bool)
+	AppendFieldLog(logger *logrus.Logger, w http.ResponseWriter, r *http.Request, c LogConfig, logFields logrus.Fields)
+	LogRequest(logger *logrus.Logger, r *http.Request, c LogConfig, logFields logrus.Fields, singleLog bool)
+	LogResponse(logger *logrus.Logger, w http.ResponseWriter, r *http.Request, ww WrapResponseWriter, c LogConfig, startTime time.Time, response string, logFields logrus.Fields, singleLog bool)
 }
 
 type StructuredLogger struct {
@@ -38,8 +37,8 @@ func NewStructuredLoggerWithProducer(logger *logrus.Logger, producer Producer, g
 	return &StructuredLogger{Logger: logger, Producer: producer, Goroutines: goroutines}
 }
 
-func (l *StructuredLogger) LogResponse(logger *logrus.Logger, w http.ResponseWriter, r *http.Request, ww middleware.WrapResponseWriter,
-	c ChiLogConfig, t1 time.Time, response string, logFields logrus.Fields, singleLog bool) {
+func (l *StructuredLogger) LogResponse(logger *logrus.Logger, w http.ResponseWriter, r *http.Request, ww WrapResponseWriter,
+	c LogConfig, t1 time.Time, response string, logFields logrus.Fields, singleLog bool) {
 	BuildResponseBody(ww, c, t1, response, logFields)
 	var msg string
 	if singleLog {
@@ -64,7 +63,7 @@ func Produce(ctx context.Context, producer Producer, msg string, logFields logru
 		producer.Produce(ctx, b, nil)
 	}
 }
-func (l *StructuredLogger) LogRequest(logger *logrus.Logger, r *http.Request, c ChiLogConfig, logFields logrus.Fields, singleLog bool) {
+func (l *StructuredLogger) LogRequest(logger *logrus.Logger, r *http.Request, c LogConfig, logFields logrus.Fields, singleLog bool) {
 	if len(c.Request) > 0 && r.Method != "GET" && r.Method != "DELETE" {
 		BuildRequestBody(r, c, logFields)
 	}
@@ -82,11 +81,11 @@ func (l *StructuredLogger) LogRequest(logger *logrus.Logger, r *http.Request, c 
 }
 
 // Add more fields middleware request and response
-func (l *StructuredLogger) AppendFieldLog(logger *logrus.Logger, w http.ResponseWriter, r *http.Request, c ChiLogConfig, logFields logrus.Fields) {
+func (l *StructuredLogger) AppendFieldLog(logger *logrus.Logger, w http.ResponseWriter, r *http.Request, c LogConfig, logFields logrus.Fields) {
 	AppendFields(r.Context(), logFields)
 }
 
-func BuildResponseBody(ww middleware.WrapResponseWriter, c ChiLogConfig, t1 time.Time, response string, logFields logrus.Fields) {
+func BuildResponseBody(ww WrapResponseWriter, c LogConfig, t1 time.Time, response string, logFields logrus.Fields) {
 	if len(c.Response) > 0 {
 		logFields[c.Response] = response
 	}
@@ -102,7 +101,7 @@ func BuildResponseBody(ww middleware.WrapResponseWriter, c ChiLogConfig, t1 time
 		logFields[c.Size] = ww.BytesWritten()
 	}
 }
-func BuildRequestBody(r *http.Request, c ChiLogConfig, logFields logrus.Fields) {
+func BuildRequestBody(r *http.Request, c LogConfig, logFields logrus.Fields) {
 	if r.Body != nil {
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(r.Body)
