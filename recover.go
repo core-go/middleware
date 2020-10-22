@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/sirupsen/logrus"
 	"net/http"
 )
@@ -41,6 +42,6 @@ func GetError(er interface{}) string {
 		err := x
 		return err.Error()
 	default:
-		return "unknown panic"
+		return fmt.Sprintf("%v", er)
 	}
 }
