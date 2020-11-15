@@ -17,6 +17,7 @@ type HttpProducer struct {
 	Goroutines bool
 	Retries    []time.Duration
 }
+
 func NewHttpProducer(client *http.Client, url string, logError func(context.Context, string), goroutines bool, retries ...time.Duration) *HttpProducer {
 	return &HttpProducer{Client: client, Url: url, LogError: logError, Goroutines: goroutines, Retries: retries}
 }
@@ -50,7 +51,7 @@ func PostWithRetries(ctx context.Context, client *http.Client, url string, log [
 		s := string(log)
 		if logError != nil {
 			if er2 != nil {
-				s2 := fmt.Sprintf("Fail to end log successfully after %d retries %s", i, s)
+				s2 := fmt.Sprintf("Fail to send log after %d retries %s", i, s)
 				logError(ctx, s2)
 			} else {
 				s2 := fmt.Sprintf("Send log successfully after %d retries %s", i, s)
