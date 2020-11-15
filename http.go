@@ -17,7 +17,9 @@ type HttpProducer struct {
 	Goroutines bool
 	Retries    []time.Duration
 }
-
+func NewHttpProducer(client *http.Client, url string, logError func(context.Context, string), goroutines bool, retries ...time.Duration) *HttpProducer {
+	return &HttpProducer{Client: client, Url: url, LogError: logError, Goroutines: goroutines, Retries: retries}
+}
 func (s *HttpProducer) Produce(ctx context.Context, data []byte, attributes *map[string]string) (string, error) {
 	if s.Goroutines {
 		go PostLog(ctx, s.Client, s.Url, data, nil, s.LogError, s.Retries...)
@@ -30,21 +32,21 @@ func (s *HttpProducer) Produce(ctx context.Context, data []byte, attributes *map
 func PostLog(ctx context.Context, client *http.Client, url string, log []byte, headers *map[string]string, logError func(context.Context, string), retries ...time.Duration) error {
 	l := len(retries)
 	if l == 0 {
-		_, err := DoWithClient(ctx, client, "POST", url, log, headers)
+		_, err := Post(ctx, client, url, log, headers)
 		return err
 	} else {
 		return PostWithRetries(ctx, client, url, log, headers, logError, retries)
 	}
 }
 func PostWithRetries(ctx context.Context, client *http.Client, url string, log []byte, headers *map[string]string, logError func(context.Context, string), retries []time.Duration) error {
-	_, er1 := DoWithClient(ctx, client, "POST", url, log, headers)
+	_, er1 := Post(ctx, client, url, log, headers)
 	if er1 == nil {
 		return er1
 	}
 	i := 0
 	err := Retry(ctx, retries, func() (err error) {
 		i = i + 1
-		_, er2 := DoWithClient(ctx, client, "POST", url, log, headers)
+		_, er2 := Post(ctx, client, url, log, headers)
 		s := string(log)
 		if logError != nil {
 			if er2 != nil {
@@ -66,40 +68,6 @@ func PostWithRetries(ctx context.Context, client *http.Client, url string, log [
 	}
 	return err
 }
-func BuildExt(ctx context.Context, keys *[]string) map[string]interface{} {
-	headers := make(map[string]interface{})
-	if keys != nil {
-		hs := *keys
-		for _, header := range hs {
-			v := ctx.Value(header)
-			if v != nil {
-				headers[header] = v
-			}
-		}
-	}
-	return headers
-}
-func BuildHeader(ctx context.Context, keys *[]string) *map[string]string {
-	if keys != nil {
-		headers := make(map[string]string)
-		hs := *keys
-		for _, header := range hs {
-			v := ctx.Value(header)
-			if v != nil {
-				s, ok := v.(string)
-				if ok {
-					headers[header] = s
-				}
-			}
-		}
-		if len(headers) > 0 {
-			return &headers
-		} else {
-			return nil
-		}
-	}
-	return nil
-}
 func GetString(ctx context.Context, key string) string {
 	if len(key) > 0 {
 		u := ctx.Value(key)
@@ -114,15 +82,8 @@ func GetString(ctx context.Context, key string) string {
 	}
 	return ""
 }
-func DoWithClient(ctx context.Context, client *http.Client, method string, url string, obj interface{}, headers *map[string]string) (*json.Decoder, error) {
-	rq, err := Marshal(obj)
-	if err != nil {
-		return nil, err
-	}
-	return DoAndBuildDecoder(ctx, client, url, method, rq, headers)
-}
-func DoAndBuildDecoder(ctx context.Context, client *http.Client, url string, method string, body []byte, headers *map[string]string) (*json.Decoder, error) {
-	res, er1 := Do(ctx, client, url, method, body, headers)
+func Post(ctx context.Context, client *http.Client, url string, body []byte, headers *map[string]string) (*json.Decoder, error) {
+	res, er1 := Do(ctx, client, url, "POST", body, headers)
 	if er1 != nil {
 		return nil, er1
 	}
@@ -165,15 +126,4 @@ func Retry(ctx context.Context, sleeps []time.Duration, f func() error) (err err
 		//Infof(ctx, "Retrying %d of %d after error: %s", i+1, attempts, err.Error())
 	}
 	return fmt.Errorf("after %d attempts, last error: %s", attempts, err)
-}
-func Marshal(v interface{}) ([]byte, error) {
-	b, ok1 := v.([]byte)
-	if ok1 {
-		return b, nil
-	}
-	s, ok2 := v.(string)
-	if ok2 {
-		return []byte(s), nil
-	}
-	return json.Marshal(v)
 }
