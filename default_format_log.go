@@ -55,7 +55,7 @@ func (l *StructuredLogger) LogResponse(logger *logrus.Logger, w http.ResponseWri
 		}
 	}
 }
-func Produce(ctx context.Context, producer Producer, msg string, logFields logrus.Fields, keyMap *map[string]string) {
+func Produce(ctx context.Context, producer Producer, msg string, logFields logrus.Fields, keyMap map[string]string) {
 	m := BuildMap(logFields)
 	m2 := AddKeyFields(msg, m, keyMap)
 	b, err := json.Marshal(m2)
@@ -119,7 +119,7 @@ func AppendFields(ctx context.Context, fields logrus.Fields) logrus.Fields {
 		}
 	}
 	if fieldConfig.Fields != nil {
-		cfs := *fieldConfig.Fields
+		cfs := fieldConfig.Fields
 		for _, k2 := range cfs {
 			if v2, ok := ctx.Value(k2).(string); ok && len(v2) > 0 {
 				fields[k2] = v2
@@ -128,12 +128,12 @@ func AppendFields(ctx context.Context, fields logrus.Fields) logrus.Fields {
 	}
 	return fields
 }
-func AddKeyFields(message string, m map[string]interface{}, keys *map[string]string) map[string]interface{} {
+func AddKeyFields(message string, m map[string]interface{}, keys map[string]string) map[string]interface{} {
 	level := "level"
 	t := "time"
 	msg := "msg"
 	if keys != nil {
-		ks := *keys
+		ks := keys
 		v1, ok1 := ks[level]
 		if ok1 && len(v1) > 0 {
 			level = v1

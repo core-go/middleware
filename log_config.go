@@ -30,14 +30,14 @@ type LogConfig struct {
 }
 
 type FieldConfig struct {
-	Log       bool               `mapstructure:"log"`
-	Ip        string             `mapstructure:"ip"`
-	Map       *map[string]string `mapstructure:"map"`
-	Constants *map[string]string `mapstructure:"constants"`
-	FieldMap  string             `mapstructure:"field_map"`
-	Duration  string             `mapstructure:"duration"`
-	Fields    *[]string          `mapstructure:"fields"`
-	Masks     *[]string          `mapstructure:"masks"`
-	Skips     *[]string          `mapstructure:"skips"`
-	KeyMap    *map[string]string `mapstructure:"key_map"`
+	Log       bool              `mapstructure:"log"`
+	Ip        string            `mapstructure:"ip"`
+	Map       map[string]string `mapstructure:"map"`
+	Constants map[string]string `mapstructure:"constants"`
+	FieldMap  string            `mapstructure:"field_map"`
+	Duration  string            `mapstructure:"duration"`
+	Fields    []string          `mapstructure:"fields"`
+	Masks     []string          `mapstructure:"masks"`
+	Skips     []string          `mapstructure:"skips"`
+	KeyMap    map[string]string `mapstructure:"key_map"`
 }

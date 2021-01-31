@@ -23,20 +23,25 @@ func InitializeFieldConfig(c LogConfig) {
 	}
 	fieldConfig.Log = c.Log
 	fieldConfig.Ip = c.Ip
-	fieldConfig.Map = c.Map
-	fieldConfig.Constants = c.Constants
+	if c.Map != nil && len(*c.Map) > 0 {
+		fieldConfig.Map = *c.Map
+	}
+	if c.Constants != nil && len(*c.Constants) > 0 {
+		fieldConfig.Constants = *c.Constants
+	}
+
 	fieldConfig.FieldMap = c.FieldMap
 	if len(c.Fields) > 0 {
 		fields := strings.Split(c.Fields, ",")
-		fieldConfig.Fields = &fields
+		fieldConfig.Fields = fields
 	}
 	if len(c.Masks) > 0 {
 		fields := strings.Split(c.Masks, ",")
-		fieldConfig.Masks = &fields
+		fieldConfig.Masks = fields
 	}
 	if len(c.Skips) > 0 {
 		fields := strings.Split(c.Skips, ",")
-		fieldConfig.Skips = &fields
+		fieldConfig.Skips = fields
 	}
 }
 func InitKeyMap(logger *logrus.Logger) {
@@ -49,7 +54,7 @@ func InitKeyMap(logger *logrus.Logger) {
 			maps[k2] = e
 		}
 		if len(maps) > 0 {
-			fieldConfig.KeyMap = &maps
+			fieldConfig.KeyMap = maps
 		}
 	}
 }
@@ -86,11 +91,11 @@ func Logger(c LogConfig, logger *logrus.Logger, f Formatter) func(h http.Handler
 		return http.HandlerFunc(fn)
 	}
 }
-func InSkipList(r *http.Request, skips *[]string) bool {
-	if skips == nil || len(*skips) == 0 {
+func InSkipList(r *http.Request, skips []string) bool {
+	if skips == nil || len(skips) == 0 {
 		return false
 	}
-	for _, s := range *skips {
+	for _, s := range skips {
 		if strings.HasSuffix(s, r.RequestURI) {
 			return true
 		}

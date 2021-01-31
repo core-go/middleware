@@ -17,14 +17,14 @@ func BuildContextWithMask(next http.Handler, mask func(fieldName, s string) stri
 			ip := GetRemoteIp(r)
 			ctx = context.WithValue(ctx, fieldConfig.Ip, ip)
 		}
-		if fieldConfig.Constants != nil && len(*fieldConfig.Constants) > 0 {
-			for k, e := range *fieldConfig.Constants {
+		if fieldConfig.Constants != nil && len(fieldConfig.Constants) > 0 {
+			for k, e := range fieldConfig.Constants {
 				if len(e) > 0 {
 					ctx = context.WithValue(ctx, k, e)
 				}
 			}
 		}
-		if fieldConfig.Map != nil && len(*fieldConfig.Map) > 0 && r.Body != nil && r.Method != "GET" || r.Method != "DELETE" {
+		if fieldConfig.Map != nil && len(fieldConfig.Map) > 0 && r.Body != nil && (r.Method != "GET" || r.Method != "DELETE") {
 			buf := new(bytes.Buffer)
 			buf.ReadFrom(r.Body)
 			r.Body = ioutil.NopCloser(buf)
@@ -45,15 +45,15 @@ func BuildContextWithMask(next http.Handler, mask func(fieldName, s string) stri
 						next.ServeHTTP(w, r.WithContext(ctx))
 					}
 				} else {
-					for k, e := range *fieldConfig.Map {
+					for k, e := range fieldConfig.Map {
 						if strings.Index(e, ".") >= 0 {
 							v3 := ValueOf(v, e)
 							if v3 != nil {
 								s3, ok3 := v3.(string)
 								if ok3 {
 									if len(s3) > 0 {
-										if mask != nil && fieldConfig.Masks != nil && len(*fieldConfig.Masks) > 0 {
-											if Include(*fieldConfig.Masks, k) {
+										if mask != nil && fieldConfig.Masks != nil && len(fieldConfig.Masks) > 0 {
+											if Include(fieldConfig.Masks, k) {
 												ctx = context.WithValue(ctx, k, mask(k, s3))
 											} else {
 												ctx = context.WithValue(ctx, k, s3)
@@ -72,8 +72,8 @@ func BuildContextWithMask(next http.Handler, mask func(fieldName, s string) stri
 								s3, ok3 := x.(string)
 								if ok3 {
 									if len(s3) > 0 {
-										if mask != nil && fieldConfig.Masks != nil && len(*fieldConfig.Masks) > 0 {
-											if Include(*fieldConfig.Masks, k) {
+										if mask != nil && fieldConfig.Masks != nil && len(fieldConfig.Masks) > 0 {
+											if Include(fieldConfig.Masks, k) {
 												ctx = context.WithValue(ctx, k, mask(k, s3))
 											} else {
 												ctx = context.WithValue(ctx, k, s3)
