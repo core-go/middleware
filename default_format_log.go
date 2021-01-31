@@ -11,7 +11,7 @@ import (
 )
 
 type Producer interface {
-	Produce(ctx context.Context, data []byte, attributes *map[string]string) (string, error)
+	Produce(ctx context.Context, data []byte, attributes map[string]string) (string, error)
 }
 type Formatter interface {
 	AppendFieldLog(logger *logrus.Logger, w http.ResponseWriter, r *http.Request, c LogConfig, logFields logrus.Fields)

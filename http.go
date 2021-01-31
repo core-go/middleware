@@ -21,7 +21,7 @@ type HttpProducer struct {
 func NewHttpProducer(client *http.Client, url string, logError func(context.Context, string), goroutines bool, retries ...time.Duration) *HttpProducer {
 	return &HttpProducer{Client: client, Url: url, LogError: logError, Goroutines: goroutines, Retries: retries}
 }
-func (s *HttpProducer) Produce(ctx context.Context, data []byte, attributes *map[string]string) (string, error) {
+func (s *HttpProducer) Produce(ctx context.Context, data []byte, attributes map[string]string) (string, error) {
 	if s.Goroutines {
 		go PostLog(ctx, s.Client, s.Url, data, nil, s.LogError, s.Retries...)
 		return "", nil
@@ -48,24 +48,13 @@ func PostWithRetries(ctx context.Context, client *http.Client, url string, log [
 	err := Retry(ctx, retries, func() (err error) {
 		i = i + 1
 		_, er2 := Post(ctx, client, url, log, headers)
-		s := string(log)
-		if logError != nil {
-			if er2 != nil {
-				s2 := fmt.Sprintf("Fail to send log after %d retries %s", i, s)
-				logError(ctx, s2)
-			} else {
-				s2 := fmt.Sprintf("Send log successfully after %d retries %s", i, s)
-				logError(ctx, s2)
-			}
+		if er2 == nil && logError != nil {
+			logError(ctx, fmt.Sprintf("Send log successfully after %d retries %s", i, log))
 		}
 		return er2
-	})
-	if err != nil {
-		if logError != nil {
-			s := string(log)
-			s2 := fmt.Sprintf("Failed to send log: %s. Error: %v.", s, err)
-			logError(ctx, s2)
-		}
+	}, logError)
+	if err != nil && logError != nil{
+		logError(ctx, fmt.Sprintf("Failed to send log after %d retries: %s. Error: %s.", len(retries), log, err.Error()))
 	}
 	return err
 }
@@ -113,7 +102,7 @@ func AddHeaderAndDo(client *http.Client, req *http.Request, headers *map[string]
 }
 
 //Copy this code from https://stackoverflow.com/questions/47606761/repeat-code-if-an-error-occured
-func Retry(ctx context.Context, sleeps []time.Duration, f func() error) (err error) {
+func Retry(ctx context.Context, sleeps []time.Duration, f func() error, log func(context.Context, string)) (err error) {
 	attempts := len(sleeps)
 	for i := 0; ; i++ {
 		err = f()
@@ -122,6 +111,9 @@ func Retry(ctx context.Context, sleeps []time.Duration, f func() error) (err err
 		}
 		if i >= (attempts - 1) {
 			break
+		}
+		if log != nil {
+			log(ctx, fmt.Sprintf("Retrying %d of %d after error: %s", i+1, attempts, err.Error()))
 		}
 		time.Sleep(sleeps[i])
 		//Infof(ctx, "Retrying %d of %d after error: %s", i+1, attempts, err.Error())
