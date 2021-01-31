@@ -116,7 +116,6 @@ func Retry(ctx context.Context, sleeps []time.Duration, f func() error, log func
 			log(ctx, fmt.Sprintf("Retrying %d of %d after error: %s", i+1, attempts, err.Error()))
 		}
 		time.Sleep(sleeps[i])
-		//Infof(ctx, "Retrying %d of %d after error: %s", i+1, attempts, err.Error())
 	}
 	return fmt.Errorf("after %d attempts, last error: %s", attempts, err)
 }
