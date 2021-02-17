@@ -1,20 +1,13 @@
 package middleware
 
 import (
-	"fmt"
-	"github.com/sirupsen/logrus"
+	"context"
 	"net"
 	"net/http"
 	"strings"
 	"time"
 )
 
-func Standardize(config LogConfig) LogConfig {
-	if len(config.Duration) == 0 {
-		config.Duration = "duration"
-	}
-	return config
-}
 func InitializeFieldConfig(c LogConfig) {
 	if len(c.Duration) > 0 {
 		fieldConfig.Duration = c.Duration
@@ -23,14 +16,12 @@ func InitializeFieldConfig(c LogConfig) {
 	}
 	fieldConfig.Log = c.Log
 	fieldConfig.Ip = c.Ip
-	if c.Map != nil && len(*c.Map) > 0 {
-		fieldConfig.Map = *c.Map
+	if c.Map != nil && len(c.Map) > 0 {
+		fieldConfig.Map = c.Map
 	}
-	if c.Constants != nil && len(*c.Constants) > 0 {
-		fieldConfig.Constants = *c.Constants
+	if c.Constants != nil && len(c.Constants) > 0 {
+		fieldConfig.Constants = c.Constants
 	}
-
-	fieldConfig.FieldMap = c.FieldMap
 	if len(c.Fields) > 0 {
 		fields := strings.Split(c.Fields, ",")
 		fieldConfig.Fields = fields
@@ -44,45 +35,28 @@ func InitializeFieldConfig(c LogConfig) {
 		fieldConfig.Skips = fields
 	}
 }
-func InitKeyMap(logger *logrus.Logger) {
-	f1, ok := logger.Formatter.(*logrus.JSONFormatter)
-	if ok {
-		maps := make(map[string]string)
-		fms := f1.FieldMap
-		for k, e := range fms {
-			k2 := fmt.Sprint(k)
-			maps[k2] = e
-		}
-		if len(maps) > 0 {
-			fieldConfig.KeyMap = maps
-		}
-	}
-}
-func Logger(c LogConfig, logger *logrus.Logger, f Formatter) func(h http.Handler) http.Handler {
+func Logger(c LogConfig, log func(ctx context.Context, msg string, fields map[string]interface{}), f Formatter) func(h http.Handler) http.Handler {
 	InitializeFieldConfig(c)
-	InitKeyMap(logger)
 	return func(h http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
-			if !fieldConfig.Log || !logrus.IsLevelEnabled(logrus.InfoLevel) || InSkipList(r, fieldConfig.Skips) {
+			if !fieldConfig.Log || InSkipList(r, fieldConfig.Skips) {
 				h.ServeHTTP(w, r)
 			} else {
 				dw := NewResponseWriter(w)
 				ww := NewWrapResponseWriter(dw, r.ProtoMajor)
 				startTime := time.Now()
-				logFields := BuildLogFields(c, w, r)
-				f.AppendFieldLog(logger, w, r, c, logFields)
+				logFields := BuildLogFields(c, r)
 				single := !c.Separate
 				if r.Method == "GET" || r.Method == "DELETE" {
 					single = true
 				}
-				f.LogRequest(logger, r, c, logFields, single)
+				f.LogRequest(log, r, c, logFields, single)
 				defer func() {
 					if single {
-						f.LogResponse(logger, w, r, ww, c, startTime, dw.Body.String(), logFields, single)
+						f.LogResponse(log, w, r, ww, c, startTime, dw.Body.String(), logFields, single)
 					} else {
-						resLogFields := BuildLogFields(c, w, r)
-						f.AppendFieldLog(logger, w, r, c, resLogFields)
-						f.LogResponse(logger, w, r, ww, c, startTime, dw.Body.String(), resLogFields, single)
+						resLogFields := BuildLogFields(c, r)
+						f.LogResponse(log, w, r, ww, c, startTime, dw.Body.String(), resLogFields, single)
 					}
 				}()
 				h.ServeHTTP(ww, r)
@@ -102,11 +76,11 @@ func InSkipList(r *http.Request, skips []string) bool {
 	}
 	return false
 }
-func BuildLogFields(c LogConfig, w http.ResponseWriter, r *http.Request) logrus.Fields {
-	logFields := logrus.Fields{}
+func BuildLogFields(c LogConfig, r *http.Request) map[string]interface{} {
 	if !c.Build {
-		return logFields
+		return nil
 	}
+	logFields := make(map[string]interface{}, 0)
 	scheme := "http"
 	if r.TLS != nil {
 		scheme = "https"

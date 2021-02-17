@@ -4,88 +4,78 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
 	"time"
 )
 
-type Producer interface {
-	Produce(ctx context.Context, data []byte, attributes map[string]string) (string, error)
-}
 type Formatter interface {
-	AppendFieldLog(logger *logrus.Logger, w http.ResponseWriter, r *http.Request, c LogConfig, logFields logrus.Fields)
-	LogRequest(logger *logrus.Logger, r *http.Request, c LogConfig, logFields logrus.Fields, singleLog bool)
-	LogResponse(logger *logrus.Logger, w http.ResponseWriter, r *http.Request, ww WrapResponseWriter, c LogConfig, startTime time.Time, response string, logFields logrus.Fields, singleLog bool)
+	LogRequest(log func(context.Context, string, map[string]interface{}), r *http.Request, c LogConfig, logFields map[string]interface{}, singleLog bool)
+	LogResponse(log func(context.Context, string, map[string]interface{}), w http.ResponseWriter, r *http.Request, ww WrapResponseWriter, c LogConfig, startTime time.Time, response string, logFields map[string]interface{}, singleLog bool)
 }
-
 type StructuredLogger struct {
-	Logger     *logrus.Logger
-	Producer   Producer
+	Produce    func(ctx context.Context, data []byte, attributes map[string]string) (string, error)
+	KeyMap     map[string]string
 	Goroutines bool
 }
 
-var loggerStatic = logrus.Logger{}
 var fieldConfig FieldConfig
 
-func NewStructuredLogger(logger *logrus.Logger) *StructuredLogger {
-	loggerStatic = *logger
-	return &StructuredLogger{Logger: logger}
+func NewStructuredLogger() *StructuredLogger {
+	return &StructuredLogger{}
 }
-func NewStructuredLoggerWithProducer(logger *logrus.Logger, producer Producer, goroutines bool) *StructuredLogger {
-	loggerStatic = *logger
-	return &StructuredLogger{Logger: logger, Producer: producer, Goroutines: goroutines}
+func NewStructuredLoggerWithProduce(produce func(context.Context, []byte, map[string]string) (string, error), goroutines bool, options...map[string]string) *StructuredLogger {
+	var keyMap map[string]string
+	if len(options) >= 1 {
+		keyMap = options[0]
+	}
+	return &StructuredLogger{Produce: produce, Goroutines: goroutines, KeyMap: keyMap}
 }
-
-func (l *StructuredLogger) LogResponse(logger *logrus.Logger, w http.ResponseWriter, r *http.Request, ww WrapResponseWriter,
-	c LogConfig, t1 time.Time, response string, logFields logrus.Fields, singleLog bool) {
-	BuildResponseBody(ww, c, t1, response, logFields)
+func (l *StructuredLogger) LogResponse(log func(ctx context.Context, msg string, fields map[string]interface{}), w http.ResponseWriter, r *http.Request, ww WrapResponseWriter,
+	c LogConfig, t1 time.Time, response string, logFields map[string]interface{}, singleLog bool) {
+	fs := BuildResponseBody(ww, c, t1, response, logFields)
 	var msg string
 	if singleLog {
 		msg = r.Method + " " + r.RequestURI
 	} else {
 		msg = "Response " + r.Method + " " + r.RequestURI
 	}
-	logger.WithFields(logFields).Info(msg)
-	if l.Producer != nil {
+	log(r.Context(), msg, fs)
+	if l.Produce != nil {
 		if l.Goroutines {
-			go Produce(r.Context(), l.Producer, msg, logFields, fieldConfig.KeyMap)
+			go Produce(r.Context(), l.Produce, msg, logFields, l.KeyMap)
 		} else {
-			Produce(r.Context(), l.Producer, msg, logFields, fieldConfig.KeyMap)
+			Produce(r.Context(), l.Produce, msg, logFields, l.KeyMap)
 		}
 	}
 }
-func Produce(ctx context.Context, producer Producer, msg string, logFields logrus.Fields, keyMap map[string]string) {
-	m := BuildMap(logFields)
-	m2 := AddKeyFields(msg, m, keyMap)
+func Produce(ctx context.Context, produce func(ctx context.Context, data []byte, attributes map[string]string) (string, error), msg string, logFields map[string]interface{}, keyMap map[string]string) {
+	m2 := AddKeyFields(msg, logFields, keyMap)
 	b, err := json.Marshal(m2)
 	if err == nil {
-		producer.Produce(ctx, b, nil)
+		produce(ctx, b, nil)
 	}
 }
-func (l *StructuredLogger) LogRequest(logger *logrus.Logger, r *http.Request, c LogConfig, logFields logrus.Fields, singleLog bool) {
+func (l *StructuredLogger) LogRequest(log func(ctx context.Context, msg string, fields map[string]interface{}), r *http.Request, c LogConfig, logFields map[string]interface{}, singleLog bool) {
+	var fs map[string]interface{}
+	fs = logFields
 	if len(c.Request) > 0 && r.Method != "GET" && r.Method != "DELETE" {
-		BuildRequestBody(r, c, logFields)
+		fs = BuildRequestBody(r, c, logFields)
 	}
 	if !singleLog {
 		msg := "Request " + r.Method + " " + r.RequestURI
-		logger.WithFields(logFields).Info(msg)
-		if l.Producer != nil {
+		log(r.Context(), msg, fs)
+		if l.Produce != nil {
 			if l.Goroutines {
-				go Produce(r.Context(), l.Producer, msg, logFields, fieldConfig.KeyMap)
+				go Produce(r.Context(), l.Produce, msg, logFields, l.KeyMap)
 			} else {
-				Produce(r.Context(), l.Producer, msg, logFields, fieldConfig.KeyMap)
+				Produce(r.Context(), l.Produce, msg, logFields, l.KeyMap)
 			}
 		}
 	}
 }
 
-// Add more fields middleware request and response
-func (l *StructuredLogger) AppendFieldLog(logger *logrus.Logger, w http.ResponseWriter, r *http.Request, c LogConfig, logFields logrus.Fields) {
-	AppendFields(r.Context(), logFields)
-}
-
-func BuildResponseBody(ww WrapResponseWriter, c LogConfig, t1 time.Time, response string, logFields logrus.Fields) {
+func BuildResponseBody(ww WrapResponseWriter, c LogConfig, t1 time.Time, response string, logFields map[string]interface{}) map[string]interface{} {
 	if len(c.Response) > 0 {
 		logFields[c.Response] = response
 	}
@@ -100,33 +90,16 @@ func BuildResponseBody(ww WrapResponseWriter, c LogConfig, t1 time.Time, respons
 	if len(c.Size) > 0 {
 		logFields[c.Size] = ww.BytesWritten()
 	}
+	return logFields
 }
-func BuildRequestBody(r *http.Request, c LogConfig, logFields logrus.Fields) {
+func BuildRequestBody(r *http.Request, c LogConfig, logFields map[string]interface{}) map[string]interface{} {
 	if r.Body != nil {
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(r.Body)
 		logFields[c.Request] = buf.String()
 		r.Body = ioutil.NopCloser(buf)
 	}
-}
-
-func AppendFields(ctx context.Context, fields logrus.Fields) logrus.Fields {
-	if len(fieldConfig.FieldMap) > 0 {
-		if logFields, ok := ctx.Value(fieldConfig.FieldMap).(map[string]interface{}); ok {
-			for k, v := range logFields {
-				fields[k] = v
-			}
-		}
-	}
-	if fieldConfig.Fields != nil {
-		cfs := fieldConfig.Fields
-		for _, k2 := range cfs {
-			if v2, ok := ctx.Value(k2).(string); ok && len(v2) > 0 {
-				fields[k2] = v2
-			}
-		}
-	}
-	return fields
+	return logFields
 }
 func AddKeyFields(message string, m map[string]interface{}, keys map[string]string) map[string]interface{} {
 	level := "level"
@@ -150,12 +123,5 @@ func AddKeyFields(message string, m map[string]interface{}, keys map[string]stri
 	m[msg] = message
 	m[level] = "info"
 	m[t] = time.Now()
-	return m
-}
-func BuildMap(fields logrus.Fields) map[string]interface{} {
-	m := make(map[string]interface{})
-	for k, e := range fields {
-		m[k] = e
-	}
 	return m
 }

@@ -1,9 +1,9 @@
 package middleware
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"net/http"
 )
 
@@ -13,25 +13,25 @@ func PanicHandler() http.Handler {
 		panic("forcing a panic")
 	})
 }
-
-func Recover(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		defer func() {
-			if er := recover(); er != nil {
-				jsonBody, _ := json.Marshal(map[string]string{
-					"error": "Internal Server Error",
-				})
-				f1 := logrus.Fields{}
-				f2 := AppendFields(r.Context(), f1)
-				s := GetError(er)
-				logrus.WithFields(f2).Error(s)
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusInternalServerError)
-				w.Write(jsonBody)
-			}
-		}()
-		next.ServeHTTP(w, r)
-	})
+func Recover(log func(ctx context.Context, msg string)) func(h http.Handler) http.Handler {
+	return func(h http.Handler) http.Handler {
+		fn := func(w http.ResponseWriter, r *http.Request) {
+			defer func() {
+				if er := recover(); er != nil {
+					jsonBody, _ := json.Marshal(map[string]string{
+						"error": "Internal Server Error",
+					})
+					s := GetError(er)
+					log(r.Context(), s)
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(http.StatusInternalServerError)
+					w.Write(jsonBody)
+				}
+			}()
+			h.ServeHTTP(w, r)
+		}
+		return http.HandlerFunc(fn)
+	}
 }
 
 func GetError(er interface{}) string {
