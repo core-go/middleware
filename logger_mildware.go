@@ -45,18 +45,18 @@ func Logger(c LogConfig, log func(ctx context.Context, msg string, fields map[st
 				dw := NewResponseWriter(w)
 				ww := NewWrapResponseWriter(dw, r.ProtoMajor)
 				startTime := time.Now()
-				logFields := BuildLogFields(c, r)
+				fields := BuildLogFields(c, r)
 				single := !c.Separate
 				if r.Method == "GET" || r.Method == "DELETE" {
 					single = true
 				}
-				f.LogRequest(log, r, c, logFields, single)
+				f.LogRequest(log, r, c, fields, single)
 				defer func() {
 					if single {
-						f.LogResponse(log, w, r, ww, c, startTime, dw.Body.String(), logFields, single)
+						f.LogResponse(log, r, ww, c, startTime, dw.Body.String(), fields, single)
 					} else {
 						resLogFields := BuildLogFields(c, r)
-						f.LogResponse(log, w, r, ww, c, startTime, dw.Body.String(), resLogFields, single)
+						f.LogResponse(log, r, ww, c, startTime, dw.Body.String(), resLogFields, single)
 					}
 				}()
 				h.ServeHTTP(ww, r)
@@ -77,43 +77,43 @@ func InSkipList(r *http.Request, skips []string) bool {
 	return false
 }
 func BuildLogFields(c LogConfig, r *http.Request) map[string]interface{} {
+	fields := make(map[string]interface{}, 0)
 	if !c.Build {
-		return nil
+		return fields
 	}
-	logFields := make(map[string]interface{}, 0)
 	scheme := "http"
 	if r.TLS != nil {
 		scheme = "https"
 	}
 	if len(c.Uri) > 0 {
-		logFields[c.Uri] = r.RequestURI
+		fields[c.Uri] = r.RequestURI
 	}
 
 	if len(c.ReqId) > 0 {
 		if reqID := GetReqID(r.Context()); reqID != "" {
-			logFields[c.ReqId] = reqID
+			fields[c.ReqId] = reqID
 		}
 	}
 	if len(c.Scheme) > 0 {
-		logFields[c.Scheme] = scheme
+		fields[c.Scheme] = scheme
 	}
 	if len(c.Proto) > 0 {
-		logFields[c.Proto] = r.Proto
+		fields[c.Proto] = r.Proto
 	}
 	if len(c.UserAgent) > 0 {
-		logFields[c.UserAgent] = r.UserAgent()
+		fields[c.UserAgent] = r.UserAgent()
 	}
 	if len(c.RemoteAddr) > 0 {
-		logFields[c.RemoteAddr] = r.RemoteAddr
+		fields[c.RemoteAddr] = r.RemoteAddr
 	}
 	if len(c.Method) > 0 {
-		logFields[c.Method] = r.Method
+		fields[c.Method] = r.Method
 	}
 	if len(c.RemoteIp) > 0 {
 		remoteIP := GetRemoteIp(r)
-		logFields[c.RemoteIp] = remoteIP
+		fields[c.RemoteIp] = remoteIP
 	}
-	return logFields
+	return fields
 }
 func GetRemoteIp(r *http.Request) string {
 	remoteIP, _, err := net.SplitHostPort(r.RemoteAddr)

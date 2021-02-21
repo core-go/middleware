@@ -17,14 +17,15 @@ func Recover(log func(ctx context.Context, msg string)) func(h http.Handler) htt
 	return func(h http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
 			defer func() {
-				if er := recover(); er != nil {
-					jsonBody, _ := json.Marshal(map[string]string{
-						"error": "Internal Server Error",
-					})
+				er := recover()
+				if er != nil {
 					s := GetError(er)
 					log(r.Context(), s)
 					w.Header().Set("Content-Type", "application/json")
 					w.WriteHeader(http.StatusInternalServerError)
+					jsonBody, _ := json.Marshal(map[string]string{
+						"error": "Internal Server Error",
+					})
 					w.Write(jsonBody)
 				}
 			}()
@@ -35,6 +36,9 @@ func Recover(log func(ctx context.Context, msg string)) func(h http.Handler) htt
 }
 
 func GetError(er interface{}) string {
+	if er == nil {
+		return "Internal Server Error"
+	}
 	switch x := er.(type) {
 	case string:
 		return er.(string)
