@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-// refer to https://medium.com/@masnun/panic-recovery-middleware-for-go-http-handlers-51147c941f9 and  http://www.golangtraining.in/lessons/middleware/recovering-from-panic.html
+// PanicHandler refer to https://medium.com/@masnun/panic-recovery-middleware-for-go-http-handlers-51147c941f9 and  http://www.golangtraining.in/lessons/middleware/recovering-from-panic.html
 func PanicHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		panic("forcing a panic")
