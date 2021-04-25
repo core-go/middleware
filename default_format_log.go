@@ -14,7 +14,7 @@ type Formatter interface {
 	LogResponse(log func(context.Context, string, map[string]interface{}), r *http.Request, ww WrapResponseWriter, c LogConfig, startTime time.Time, response string, fields map[string]interface{}, singleLog bool)
 }
 type StructuredLogger struct {
-	Produce    func(ctx context.Context, data []byte, attributes map[string]string) (string, error)
+	send       func(ctx context.Context, data []byte, attributes map[string]string) (string, error)
 	KeyMap     map[string]string
 	Goroutines bool
 }
@@ -24,12 +24,12 @@ var fieldConfig FieldConfig
 func NewStructuredLogger() *StructuredLogger {
 	return &StructuredLogger{}
 }
-func NewStructuredLoggerWithProduce(produce func(context.Context, []byte, map[string]string) (string, error), goroutines bool, options...map[string]string) *StructuredLogger {
+func NewStructuredLoggerWithProduce(send func(context.Context, []byte, map[string]string) (string, error), goroutines bool, options ...map[string]string) *StructuredLogger {
 	var keyMap map[string]string
 	if len(options) >= 1 {
 		keyMap = options[0]
 	}
-	return &StructuredLogger{Produce: produce, Goroutines: goroutines, KeyMap: keyMap}
+	return &StructuredLogger{send: send, Goroutines: goroutines, KeyMap: keyMap}
 }
 func (l *StructuredLogger) LogResponse(log func(context.Context, string, map[string]interface{}), r *http.Request, ww WrapResponseWriter,
 	c LogConfig, t1 time.Time, response string, fields map[string]interface{}, singleLog bool) {
@@ -41,19 +41,19 @@ func (l *StructuredLogger) LogResponse(log func(context.Context, string, map[str
 		msg = "Response " + r.Method + " " + r.RequestURI
 	}
 	log(r.Context(), msg, fs)
-	if l.Produce != nil {
+	if l.send != nil {
 		if l.Goroutines {
-			go Produce(r.Context(), l.Produce, msg, fields, l.KeyMap)
+			go Send(r.Context(), l.send, msg, fields, l.KeyMap)
 		} else {
-			Produce(r.Context(), l.Produce, msg, fields, l.KeyMap)
+			Send(r.Context(), l.send, msg, fields, l.KeyMap)
 		}
 	}
 }
-func Produce(ctx context.Context, produce func(ctx context.Context, data []byte, attributes map[string]string) (string, error), msg string, fields map[string]interface{}, keyMap map[string]string) {
+func Send(ctx context.Context, send func(ctx context.Context, data []byte, attributes map[string]string) (string, error), msg string, fields map[string]interface{}, keyMap map[string]string) {
 	m2 := AddKeyFields(msg, fields, keyMap)
 	b, err := json.Marshal(m2)
 	if err == nil {
-		produce(ctx, b, nil)
+		send(ctx, b, nil)
 	}
 }
 func (l *StructuredLogger) LogRequest(log func(context.Context, string, map[string]interface{}), r *http.Request, c LogConfig, fields map[string]interface{}, singleLog bool) {
@@ -65,11 +65,11 @@ func (l *StructuredLogger) LogRequest(log func(context.Context, string, map[stri
 	if !singleLog {
 		msg := "Request " + r.Method + " " + r.RequestURI
 		log(r.Context(), msg, fs)
-		if l.Produce != nil {
+		if l.send != nil {
 			if l.Goroutines {
-				go Produce(r.Context(), l.Produce, msg, fields, l.KeyMap)
+				go Send(r.Context(), l.send, msg, fields, l.KeyMap)
 			} else {
-				Produce(r.Context(), l.Produce, msg, fields, l.KeyMap)
+				Send(r.Context(), l.send, msg, fields, l.KeyMap)
 			}
 		}
 	}
