@@ -14,7 +14,7 @@ func BuildContextWithMask(next http.Handler, mask func(fieldName, s string) stri
 		var ctx context.Context
 		ctx = r.Context()
 		if len(fieldConfig.Ip) > 0 {
-			ip := GetRemoteIp(r)
+			ip := getRemoteIp(r)
 			ctx = context.WithValue(ctx, fieldConfig.Ip, ip)
 		}
 		if fieldConfig.Constants != nil && len(fieldConfig.Constants) > 0 {
@@ -130,36 +130,4 @@ func ValueOf(m interface{}, path string) interface{} {
 		i++
 	}
 	return c
-}
-
-func Mask(s string, start int, end int, mask string) string {
-	if start < 0 {
-		start = 0
-	}
-	if end < 0 {
-		end = 0
-	}
-	if start+end >= len(s) {
-		return strings.Repeat(mask, len(s))
-	}
-	return s[:start] + strings.Repeat(mask, len(s)-start-end) + s[len(s)-end:]
-}
-
-func MaskMargin(s string, start int, end int, mask string) string {
-	if start >= end {
-		return ""
-	}
-	if start < 0 {
-		start = 0
-	}
-	if end < 0 {
-		end = 0
-	}
-	if start >= len(s) {
-		return strings.Repeat(mask, len(s))
-	}
-	if end >= len(s) {
-		return strings.Repeat(mask, start) + s[start:]
-	}
-	return strings.Repeat(mask, start) + s[start:end] + strings.Repeat(mask, len(s)-end)
 }
