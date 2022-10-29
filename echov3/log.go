@@ -149,7 +149,7 @@ func (l *EchoLogger) BuildContextWithMask(next echo.HandlerFunc) echo.HandlerFun
 				}
 			}
 		} else {
-			if len(fieldConfig.Ip) == 0 && fieldConfig.Constants == nil {
+			if len(fieldConfig.Ip) == 0 && fieldConfig.Constants == nil && fieldConfig.Headers == nil {
 				return next(c)
 			} else {
 				ctxEcho.SetRequest(c.Request().WithContext(ctx))

@@ -56,7 +56,7 @@ func (l *GinLogger) Logger() gin.HandlerFunc {
 }
 
 func (l *GinLogger) BuildContextWithMask() gin.HandlerFunc {
-	return func(c *gin.Context)  {
+	return func(c *gin.Context) {
 		ctxGin := c
 		var ctx context.Context
 		ctx = c.Request.Context()
@@ -149,7 +149,7 @@ func (l *GinLogger) BuildContextWithMask() gin.HandlerFunc {
 				}
 			}
 		} else {
-			if len(fieldConfig.Ip) == 0 && fieldConfig.Constants == nil {
+			if len(fieldConfig.Ip) == 0 && fieldConfig.Constants == nil && fieldConfig.Headers == nil {
 				c.Next()
 			} else {
 				ctxGin.Request = ctxGin.Request.WithContext(ctx)
