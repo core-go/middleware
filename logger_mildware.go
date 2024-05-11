@@ -50,16 +50,18 @@ func Logger(c LogConfig, log func(ctx context.Context, msg string, fields map[st
 				startTime := time.Now()
 				fields := BuildLogFields(c, r)
 				single := !c.Separate
-				if r.Method == "GET" || r.Method == "DELETE" || strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
-					single = true
+				if !single {
+					if r.Method == "GET" || r.Method == "DELETE" || strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
+						single = true
+					}
 				}
-				f.LogRequest(log, r, c, fields, single)
+				go f.LogRequest(log, r, c, fields, single)
 				defer func() {
 					if single {
-						f.LogResponse(log, r, ww, c, startTime, dw.Body.String(), fields, single)
+						go f.LogResponse(log, r, ww, c, startTime, dw.Body.String(), fields, single)
 					} else {
 						resLogFields := BuildLogFields(c, r)
-						f.LogResponse(log, r, ww, c, startTime, dw.Body.String(), resLogFields, single)
+						go f.LogResponse(log, r, ww, c, startTime, dw.Body.String(), resLogFields, single)
 					}
 				}()
 				h.ServeHTTP(ww, r)
@@ -80,7 +82,7 @@ func InSkipList(r *http.Request, skips []string) bool {
 	return false
 }
 func BuildLogFields(c LogConfig, r *http.Request) map[string]interface{} {
-	fields := make(map[string]interface{}, 0)
+	fields := make(map[string]interface{})
 	if !c.Build {
 		return fields
 	}
