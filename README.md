@@ -1,7 +1,7 @@
 # middleware
 Middleware logging is a technique used in software development, particularly in web and microservices applications, to log important information about incoming requests, outgoing responses, and the operations performed by the application.
 - [core-go/middleware](https://github.com/core-go/middleware) is designed to integrate with middleware logging seamlessly for existing Go libraries: [Echo](https://github.com/labstack/echo), [Gin](https://github.com/gin-gonic/gin), or net/http ([Gorilla mux](https://github.com/gorilla/mux), [Go-chi](https://github.com/go-chi/chi)), with any logging libraries ([zap](https://pkg.go.dev/go.uber.org/zap), [logrus](https://github.com/sirupsen/logrus)), to log request headers, request body, response status code, body content, response time, and size
-- Especially, [core-go/middleware](https://github.com/core-go/middleware) supported to encrypt sensitive data, which is useful for Financial Transactions (to comply with <b>PCI-DSS</b> standards) and Healthcare (to comply with <b>HIPAA</b> regulations)
+- Especially, [core-go/middleware](https://github.com/core-go/middleware) supported to encrypt sensitive data, which is useful for Financial Products (to comply with <b>PCI-DSS</b> standards) and Healthcare (to comply with <b>HIPAA</b> regulations)
 
 
 - You can refer to [middleware-log-tracing](https://www.linkedin.com/pulse/middleware-log-tracing-go-duc-nguyen-uh0pc) at [Linked In](https://vn.linkedin.com/in/duc-nguyen-437240239?trk=article-ssr-frontend-pulse_publisher-author-card) for more details.
