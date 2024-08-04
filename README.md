@@ -4,7 +4,7 @@ Middleware logging is a technique used in software development, particularly in 
 - Especially, [core-go/middleware](https://github.com/core-go/middleware) supported to encrypt sensitive data, which is useful for Financial Products (to comply with <b>PCI-DSS</b> standards) and Healthcare (to comply with <b>HIPAA</b> regulations)
 
 
-- You can refer to [middleware-log-tracing](https://www.linkedin.com/pulse/middleware-log-tracing-go-duc-nguyen-uh0pc) at [Linked In](https://vn.linkedin.com/in/duc-nguyen-437240239?trk=article-ssr-frontend-pulse_publisher-author-card) for more details.
+- You can refer to [middleware-log-tracing](https://www.linkedin.com/pulse/middleware-log-tracing-go-duc-nguyen-uh0pc) at my [Linked In](https://vn.linkedin.com/in/duc-nguyen-437240239?trk=article-ssr-frontend-pulse_publisher-author-card) for more details.
 ### A typical micro service
 - When you zoom one micro service, the flow is as below, and you can see "middleware" in the full picture:
   ![A typical micro service](https://cdn-images-1.medium.com/max/800/1*d9kyekAbQYBxH-C6w38XZQ.png)
