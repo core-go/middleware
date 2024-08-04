@@ -28,12 +28,12 @@ func NewLogger() *StructuredLogger {
 func NewLoggerWithStringFormat(requestKey string, stringFormat bool) *StructuredLogger {
 	return &StructuredLogger{RequestKey: requestKey, StringFormat: stringFormat}
 }
-func NewLoggerWithSending(send func(context.Context, []byte, map[string]string) error, options ...map[string]string) *StructuredLogger {
+func NewLoggerWithSending(requestKey string, stringFormat bool, send func(context.Context, []byte, map[string]string) error, options ...map[string]string) *StructuredLogger {
 	var keyMap map[string]string
 	if len(options) >= 1 {
 		keyMap = options[0]
 	}
-	return &StructuredLogger{send: send, KeyMap: keyMap}
+	return &StructuredLogger{RequestKey: requestKey, StringFormat: stringFormat, send: send, KeyMap: keyMap}
 }
 
 func (l *StructuredLogger) LogResponse(log func(context.Context, string, map[string]interface{}), r *http.Request, ww WrapResponseWriter,
