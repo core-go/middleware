@@ -25,7 +25,7 @@ var fieldConfig FieldConfig
 func NewLogger() *StructuredLogger {
 	return &StructuredLogger{}
 }
-func NewLoggerWithStringFormat(requestKey string, jsonFormat bool) *StructuredLogger {
+func NewLoggerWithJsonFormat(requestKey string, jsonFormat bool) *StructuredLogger {
 	return &StructuredLogger{RequestKey: requestKey, JsonFormat: jsonFormat}
 }
 func NewLoggerWithSending(requestKey string, jsonFormat bool, send func(context.Context, []byte, map[string]string) error, options ...map[string]string) *StructuredLogger {
